@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Uchiha Clan", "label": "Uchiha Clan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "crimson eyes", "label": "crimson eyes", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sharingan", "label": "Sharingan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "distinguishable by crimson eyes", "label": "distinguishable by crimson eyes", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "the Sharingan", "label": "the Sharingan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mangekyo Sharingan", "label": "Mangekyo Sharingan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Amaterasu", "label": "Amaterasu", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Susanoo", "label": "Susanoo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Itachi Uchiha", "label": "Itachi Uchiha", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sasuke Uchiha", "label": "Sasuke Uchiha", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "tragic tales", "label": "tragic tales", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Naruto", "label": "Naruto", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "a profound lineage", "label": "a profound lineage", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "legacy left by those who came before", "label": "legacy left by those who came before", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "path of self-discovery and acceptance", "label": "path of self-discovery and acceptance", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mastery of chakra control", "label": "mastery of chakra control", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "harnessing of Tailed Beast", "label": "harnessing of Tailed Beast", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "peers and mentors", "label": "peers and mentors", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "connections with peers and mentors", "label": "connections with peers and mentors", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "camaraderie", "label": "camaraderie", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sacrifice", "label": "sacrifice", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "pursuit of peace", "label": "pursuit of peace", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "peers", "label": "peers", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mentors", "label": "mentors", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "friendships", "label": "friendships", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mentorship", "label": "mentorship", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "generation", "label": "generation", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Boruto Uzumaki", "label": "Boruto Uzumaki", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "cyclical nature of ninja life", "label": "cyclical nature of ninja life", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "resilience", "label": "resilience", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "growth", "label": "growth", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "enduring power of bonds", "label": "enduring power of bonds", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sakura Haruno", "label": "Sakura Haruno", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Kakashi Hatake", "label": "Kakashi Hatake", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Jiraiya", "label": "Jiraiya", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Unknown", "label": "Unknown", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Boruto: Naruto Next Generations", "label": "Boruto: Naruto Next Generations", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Hyuga Clan", "label": "Hyuga Clan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Byakugan", "label": "Byakugan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mastery of Byakugan", "label": "mastery of Byakugan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "the Byakugan", "label": "the Byakugan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nearly omniscient vision", "label": "nearly omniscient vision", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Hiashi Hyuga", "label": "Hiashi Hyuga", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "layers of complexity to the battles that unfold", "label": "layers of complexity to the battles that unfold", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Gentle Fist style", "label": "Gentle Fist style", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "layers of complexity", "label": "layers of complexity", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "proficiency of Hyuga Clan\u0027s Byakugan", "label": "proficiency of Hyuga Clan\u0027s Byakugan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Naruto Uzumaki", "label": "Naruto Uzumaki", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "indomitable orphan", "label": "indomitable orphan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "burning desire to ascend as the village\u2019s strongest ninja", "label": "burning desire to ascend as the village\u2019s strongest ninja", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "desire to earn respect", "label": "desire to earn respect", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "profound lineage", "label": "profound lineage", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "the legacy left by those who came before", "label": "the legacy left by those who came before", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "self-discovery and acceptance", "label": "self-discovery and acceptance", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "chakra control", "label": "chakra control", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Tailed Beast", "label": "Tailed Beast", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Tailed Beast within him", "label": "Tailed Beast within him", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Sasuke", "label": "Sasuke", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "younger brother of Itachi Uchiha", "label": "younger brother of Itachi Uchiha", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Hinata", "label": "Hinata", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "story woven by Byakugan", "label": "story woven by Byakugan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Neji", "label": "Neji", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Minato Namikaze", "label": "Minato Namikaze", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "the Fourth Hokage", "label": "the Fourth Hokage", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Fourth Hokage", "label": "Fourth Hokage", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Chakra", "label": "Chakra", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "fundamental energy", "label": "fundamental energy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rasengan", "label": "Rasengan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Naruto Uzumaki\u0027s growth as a ninja", "label": "Naruto Uzumaki\u0027s growth as a ninja", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "manifestation of chakra", "label": "manifestation of chakra", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "spinning", "label": "spinning", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Naruto\u0027s growth as a ninja", "label": "Naruto\u0027s growth as a ninja", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "emblematic of growth", "label": "emblematic of growth", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "unique technique", "label": "unique technique", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "unique technique of Sharingan", "label": "unique technique of Sharingan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "unique technique of Mangekyo Sharingan", "label": "unique technique of Mangekyo Sharingan", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Camaraderie", "label": "Camaraderie", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Naruto\u0027s connections with peers and mentors", "label": "Naruto\u0027s connections with peers and mentors", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "Uchiha Clan", "label": "is distinguishable by", "title": "is distinguishable by", "to": "crimson eyes", "width": 1}, {"arrows": "to", "from": "Uchiha Clan", "label": "wields", "title": "wields", "to": "Sharingan", "width": 1}, {"arrows": "to", "from": "Uchiha Clan", "label": "is", "title": "is", "to": "distinguishable by crimson eyes", "width": 1}, {"arrows": "to", "from": "Uchiha Clan", "label": "wields", "title": "wields", "to": "the Sharingan", "width": 1}, {"arrows": "to", "from": "Sharingan", "label": "evolves into", "title": "evolves into", "to": "Mangekyo Sharingan", "width": 1}, {"arrows": "to", "from": "Sharingan", "label": "is unique technique of", "title": "is unique technique of", "to": "Amaterasu", "width": 1}, {"arrows": "to", "from": "Mangekyo Sharingan", "label": "is unique technique of", "title": "is unique technique of", "to": "Susanoo", "width": 1}, {"arrows": "to", "from": "Itachi Uchiha", "label": "is brother of", "title": "is brother of", "to": "Sasuke Uchiha", "width": 1}, {"arrows": "to", "from": "Itachi Uchiha", "label": "has", "title": "has", "to": "tragic tales", "width": 1}, {"arrows": "to", "from": "Sasuke Uchiha", "label": "has friendships with", "title": "has friendships with", "to": "Naruto", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "carries the weight of", "title": "carries the weight of", "to": "a profound lineage", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "grapples with", "title": "grapples with", "to": "legacy left by those who came before", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "embarks on", "title": "embarks on", "to": "path of self-discovery and acceptance", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "is marked by", "title": "is marked by", "to": "mastery of chakra control", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "is marked by", "title": "is marked by", "to": "harnessing of Tailed Beast", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "deepens connections with", "title": "deepens connections with", "to": "peers and mentors", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "deepens", "title": "deepens", "to": "connections with peers and mentors", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "explored", "title": "explored", "to": "camaraderie", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "explored", "title": "explored", "to": "sacrifice", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "explored", "title": "explored", "to": "pursuit of peace", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "has connections with", "title": "has connections with", "to": "peers", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "has connections with", "title": "has connections with", "to": "mentors", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "has abilities shaped by", "title": "has abilities shaped by", "to": "friendships", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "has abilities shaped by", "title": "has abilities shaped by", "to": "mentorship", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "has narrative extending beyond", "title": "has narrative extending beyond", "to": "generation", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "has a son", "title": "has a son", "to": "Boruto Uzumaki", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "demonstrates", "title": "demonstrates", "to": "cyclical nature of ninja life", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "stands as a testament to", "title": "stands as a testament to", "to": "resilience", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "stands as a testament to", "title": "stands as a testament to", "to": "growth", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "stands as a testament to", "title": "stands as a testament to", "to": "enduring power of bonds", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "is peer of", "title": "is peer of", "to": "Sakura Haruno", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "is mentor of", "title": "is mentor of", "to": "Kakashi Hatake", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "provides profound guidance to", "title": "provides profound guidance to", "to": "Jiraiya", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "is the son of", "title": "is the son of", "to": "Unknown", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "is the protagonist of", "title": "is the protagonist of", "to": "Naruto", "width": 1}, {"arrows": "to", "from": "Naruto", "label": "is the protagonist of", "title": "is the protagonist of", "to": "Boruto: Naruto Next Generations", "width": 1}, {"arrows": "to", "from": "Hyuga Clan", "label": "masters", "title": "masters", "to": "Byakugan", "width": 1}, {"arrows": "to", "from": "Hyuga Clan", "label": "has", "title": "has", "to": "mastery of Byakugan", "width": 1}, {"arrows": "to", "from": "Hyuga Clan", "label": "mastery of", "title": "mastery of", "to": "the Byakugan", "width": 1}, {"arrows": "to", "from": "Hyuga Clan", "label": "bestows", "title": "bestows", "to": "nearly omniscient vision", "width": 1}, {"arrows": "to", "from": "Hyuga Clan", "label": "leads", "title": "leads", "to": "Hiashi Hyuga", "width": 1}, {"arrows": "to", "from": "Byakugan", "label": "bestows", "title": "bestows", "to": "nearly omniscient vision", "width": 1}, {"arrows": "to", "from": "Byakugan", "label": "adds", "title": "adds", "to": "layers of complexity to the battles that unfold", "width": 1}, {"arrows": "to", "from": "Byakugan", "label": "bestows nearly omniscient vision and proficiency in", "title": "bestows nearly omniscient vision and proficiency in", "to": "Gentle Fist style", "width": 1}, {"arrows": "to", "from": "Byakugan", "label": "adds", "title": "adds", "to": "layers of complexity", "width": 1}, {"arrows": "to", "from": "Gentle Fist style", "label": "is", "title": "is", "to": "proficiency of Hyuga Clan\u0027s Byakugan", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "is", "title": "is", "to": "indomitable orphan", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "has", "title": "has", "to": "burning desire to ascend as the village\u2019s strongest ninja", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "has", "title": "has", "to": "desire to earn respect", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "carries the weight of", "title": "carries the weight of", "to": "a profound lineage", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "carries the weight of", "title": "carries the weight of", "to": "profound lineage", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "grapples with", "title": "grapples with", "to": "legacy left by those who came before", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "grapples with", "title": "grapples with", "to": "the legacy left by those who came before", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "embarks on a path of", "title": "embarks on a path of", "to": "self-discovery and acceptance", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "mastery of", "title": "mastery of", "to": "chakra control", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "harnessing of", "title": "harnessing of", "to": "Tailed Beast", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "marks his journey with", "title": "marks his journey with", "to": "mastery of chakra control", "width": 1}, {"arrows": "to", "from": "Naruto Uzumaki", "label": "harnesses", "title": "harnesses", "to": "Tailed Beast within him", "width": 1}, {"arrows": "to", "from": "Sasuke", "label": "is", "title": "is", "to": "younger brother of Itachi Uchiha", "width": 1}, {"arrows": "to", "from": "Hinata", "label": "has", "title": "has", "to": "story woven by Byakugan", "width": 1}, {"arrows": "to", "from": "story woven by Byakugan", "label": "has", "title": "has", "to": "Neji", "width": 1}, {"arrows": "to", "from": "Minato Namikaze", "label": "is", "title": "is", "to": "the Fourth Hokage", "width": 1}, {"arrows": "to", "from": "Minato Namikaze", "label": "is", "title": "is", "to": "Fourth Hokage", "width": 1}, {"arrows": "to", "from": "Chakra", "label": "is", "title": "is", "to": "fundamental energy", "width": 1}, {"arrows": "to", "from": "Rasengan", "label": "becomes emblematic of", "title": "becomes emblematic of", "to": "Naruto Uzumaki\u0027s growth as a ninja", "width": 1}, {"arrows": "to", "from": "Rasengan", "label": "is", "title": "is", "to": "manifestation of chakra", "width": 1}, {"arrows": "to", "from": "Rasengan", "label": "is", "title": "is", "to": "spinning", "width": 1}, {"arrows": "to", "from": "Rasengan", "label": "is emblematic of", "title": "is emblematic of", "to": "Naruto\u0027s growth as a ninja", "width": 1}, {"arrows": "to", "from": "Rasengan", "label": "becomes", "title": "becomes", "to": "emblematic of growth", "width": 1}, {"arrows": "to", "from": "Amaterasu", "label": "is", "title": "is", "to": "unique technique", "width": 1}, {"arrows": "to", "from": "Amaterasu", "label": "is", "title": "is", "to": "unique technique of Sharingan", "width": 1}, {"arrows": "to", "from": "unique technique", "label": "is", "title": "is", "to": "Susanoo", "width": 1}, {"arrows": "to", "from": "Susanoo", "label": "is", "title": "is", "to": "unique technique of Mangekyo Sharingan", "width": 1}, {"arrows": "to", "from": "Camaraderie", "label": "is explored through", "title": "is explored through", "to": "Naruto\u0027s connections with peers and mentors", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
